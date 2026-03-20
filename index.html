@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purrfect Find — Cat Adoption Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root{
+  --cream:#faf7f2;--warm:#fffefb;--ink:#1a1208;--muted:#6b5e4a;--faint:#b8a98e;
+  --amber:#c4780a;--amber-l:#fef4e0;--amber-m:#f5c96a;
+  --sage:#4a7050;--sage-l:#eaf3eb;
+  --blush:#b8503a;--blush-l:#fdf0ed;
+  --border:#e6ddd0;--border2:#cfc3b0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6}
+
+/* HEADER */
+header{background:var(--warm);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:0;z-index:100}
+.hdr{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;gap:1rem;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:6px;text-decoration:none}
+.logo-main{font-family:'Playfair Display',serif;font-size:21px;font-weight:600;color:var(--ink)}
+.logo-sub{font-size:11px;font-weight:500;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+select.isel{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--ink);cursor:pointer;outline:none}
+select.isel:focus{border-color:var(--amber)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--cream);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;transition:all .18s;white-space:nowrap}
+.btn:hover{border-color:var(--amber)}
+.btn.on{background:var(--amber-l);border-color:var(--amber);color:var(--amber)}
+.btn .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex-shrink:0;transition:background .2s}
+.btn.on .dot{background:var(--amber);animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* STATUS */
+.strip{display:none;padding:7px 1.5rem;font-size:13px;font-weight:500;border-bottom:1px solid transparent;align-items:center;gap:8px}
+.strip.show{display:flex}
+.strip.checking{background:#fefce8;color:#8a6800;border-color:#f5e087}
+.strip.ok{background:var(--sage-l);color:var(--sage);border-color:#c2ddc4}
+.strip.err{background:var(--blush-l);color:var(--blush);border-color:#f0c4bb}
+.strip.fresh{background:var(--sage-l);color:var(--sage);border-color:#c2ddc4}
+
+/* HERO */
+.hero{background:var(--warm);border-bottom:1px solid var(--border);padding:1.75rem 1.5rem 1.4rem}
+.hero-in{max-width:1120px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem;flex-wrap:wrap}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,3.5vw,34px);font-weight:400;line-height:1.2}
+.hero h1 em{font-style:italic;color:var(--amber)}
+.hero-sub{font-size:13px;color:var(--muted);margin-top:5px}
+.stats{display:flex;gap:1.75rem;flex-shrink:0}
+.stat{text-align:right}
+.stat-n{font-family:'Playfair Display',serif;font-size:30px;font-weight:600;line-height:1}
+.stat-l{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+/* NEW BANNER */
+.nbanner{display:none;max-width:1120px;margin:1.2rem auto 0;padding:0 1.5rem}
+.nbanner.show{display:block}
+.nbanner-in{background:var(--sage-l);border:1px solid #b8d9ba;border-radius:14px;padding:13px 17px}
+.nbanner-t{font-size:13px;font-weight:500;color:var(--sage);margin-bottom:9px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #c2ddc4;border-radius:99px;padding:4px 11px 4px 4px;font-size:13px;color:var(--ink);text-decoration:none;transition:border-color .15s}
+.chip:hover{border-color:var(--sage)}
+.chip img{width:24px;height:24px;border-radius:50%;object-fit:cover;background:var(--border)}
+
+/* FILTERS */
+.filters{max-width:1120px;margin:1.2rem auto 0;padding:0 1.5rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.flbl{font-size:11px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-right:2px}
+.fb{padding:5px 13px;border-radius:99px;border:1.5px solid var(--border);background:var(--warm);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:all .15s}
+.fb:hover{border-color:var(--amber-m);color:var(--ink)}
+.fb.on{background:var(--amber-l);border-color:var(--amber);color:var(--amber);font-weight:500}
+.sbox{margin-left:auto;padding:6px 13px;border:1.5px solid var(--border);border-radius:99px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--warm);color:var(--ink);outline:none;width:175px;transition:border-color .15s,width .2s}
+.sbox:focus{border-color:var(--amber);width:215px}
+.sbox::placeholder{color:var(--faint)}
+
+/* GRID */
+.main{max-width:1120px;margin:0 auto;padding:1.2rem 1.5rem 4rem}
+.sort-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.cnt{font-size:13px;color:var(--muted)}
+.ssel{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 9px;border:1.5px solid var(--border);border-radius:8px;background:var(--warm);color:var(--ink);cursor:pointer;outline:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+
+/* CARD */
+.card{background:var(--warm);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:transform .2s,box-shadow .2s;animation:fadeUp .3s ease both;cursor:pointer}
+.card:hover{transform:translateY(-4px);box-shadow:0 10px 36px rgba(26,18,8,.11)}
+.card.isnew{border-color:var(--sage);box-shadow:0 0 0 3px var(--sage-l)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cimg{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:var(--cream)}
+.cimg img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
+.card:hover .cimg img{transform:scale(1.06)}
+.badge{position:absolute;font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:99px}
+.bnew{top:9px;left:9px;background:var(--sage);color:#fff}
+.bage{top:9px;right:9px;background:rgba(26,18,8,.52);color:#fff;backdrop-filter:blur(4px)}
+.cbody{padding:13px 15px 15px}
+.cname{font-family:'Playfair Display',serif;font-size:17px;font-weight:600;line-height:1.2;margin-bottom:3px}
+.cbreed{font-size:12px;color:var(--muted);text-transform:capitalize;margin-bottom:8px}
+.cloc{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);margin-bottom:7px}
+.cdate{font-size:11px;color:var(--faint);margin-bottom:10px}
+.ccta{font-size:13px;font-weight:500;color:var(--amber)}
+
+/* EMPTY */
+.empty{grid-column:1/-1;text-align:center;padding:5rem 2rem;color:var(--muted)}
+.empty-ico{font-size:44px;opacity:.35;margin-bottom:1rem}
+.empty h3{font-family:'Playfair Display',serif;font-size:20px;font-weight:400;color:var(--ink);margin-bottom:7px}
+.empty p{font-size:14px}
+.lupd{font-size:12px;color:var(--faint);text-align:center;margin-top:1.5rem}
+
+/* MODAL BASE */
+.mbg{position:fixed;inset:0;background:rgba(26,18,8,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
+.mbg.open{display:flex}
+.mbox{background:var(--warm);border-radius:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(26,18,8,.2);animation:popIn .22s ease}
+@keyframes popIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+/* EMAIL MODAL */
+.mhead{padding:22px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.mtitle{font-family:'Playfair Display',serif;font-size:22px;font-weight:600}
+.msub{font-size:13px;color:var(--muted);margin-top:4px}
+.mclose{background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;line-height:1;padding:2px}
+.mclose:hover{color:var(--ink)}
+.mbody{padding:18px 24px 24px}
+.steps{margin-bottom:16px}
+.step{margin-bottom:12px}
+.snum{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--amber-l);color:var(--amber);font-size:11px;font-weight:500;margin-right:6px;vertical-align:middle;flex-shrink:0}
+.step p{font-size:13px;color:var(--muted);margin-top:3px;padding-left:26px;line-height:1.5}
+.step a{color:var(--amber);text-decoration:none}
+.step a:hover{text-decoration:underline}
+code{font-size:12px;background:var(--cream);padding:2px 6px;border-radius:4px;font-family:monospace}
+.flbl2{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fi{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--cream);outline:none;transition:border-color .15s;margin-bottom:12px}
+.fi:focus{border-color:var(--amber)}
+.fi::placeholder{color:var(--faint)}
+hr.div{border:none;border-top:1px solid var(--border);margin:16px 0}
+.elist{display:flex;flex-direction:column;gap:6px;margin:8px 0 12px}
+.eitem{display:flex;align-items:center;justify-content:space-between;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px}
+.edel{background:none;border:none;color:var(--faint);cursor:pointer;font-size:18px;line-height:1;transition:color .15s}
+.edel:hover{color:var(--blush)}
+.erow{display:flex;gap:8px}
+.einp{flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--warm);outline:none;transition:border-color .15s}
+.einp:focus{border-color:var(--amber)}
+.badd{padding:9px 14px;border-radius:10px;border:none;background:var(--ink);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.badd:hover{opacity:.85}
+.bsave{width:100%;padding:12px;border-radius:10px;border:none;background:var(--ink);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.bsave:hover{opacity:.85}
+.bsave:disabled{opacity:.45;cursor:not-allowed}
+.smsg{font-size:13px;text-align:center;margin-top:9px;min-height:19px;color:var(--sage)}
+.smsg.err{color:var(--blush)}
+
+/* DETAIL MODAL */
+.dimg{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--cream)}
+.dbody{padding:22px}
+.dname{font-family:'Playfair Display',serif;font-size:26px;font-weight:600;margin-bottom:3px}
+.dbreed{font-size:14px;color:var(--muted);text-transform:capitalize;margin-bottom:16px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.dfl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:3px}
+.dfv{font-size:15px;text-transform:capitalize}
+.dacts{display:flex;gap:9px}
+.bgo{flex:1;padding:11px;border-radius:10px;border:none;background:var(--ink);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;text-align:center;display:block;transition:opacity .15s}
+.bgo:hover{opacity:.85}
+.bcls{padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);cursor:pointer}
+
+/* NOTIF TOAST */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--warm);border:1px solid var(--border);border-radius:14px;padding:14px 17px;box-shadow:0 8px 40px rgba(26,18,8,.13);font-size:13px;max-width:290px;display:none;z-index:500;animation:slideUp .25s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.toast.show{display:block}
+.toast p{color:var(--muted);line-height:1.5;margin-bottom:10px}
+.tbtns{display:flex;gap:7px}
+.tyes{flex:1;padding:7px;border-radius:8px;border:none;background:var(--ink);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer}
+.tno{padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer}
+
+@media(max-width:600px){
+  header,.hero,.filters,.main,.nbanner{padding-left:1rem;padding-right:1rem}
+  .stats{gap:1.25rem}
+  .sbox{width:100%;margin-left:0}
+  .dgrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <a class="logo" href="#"><span class="logo-main">Purrfect Find</span><span class="logo-sub">MH cats</span></a>
+    <div class="hdr-right">
+      <select class="isel" id="isel">
+        <option value="300000">Every 5 min</option>
+        <option value="900000">Every 15 min</option>
+        <option value="1800000">Every 30 min</option>
+        <option value="3600000">Every hour</option>
+      </select>
+      <button class="btn" onclick="openEmail()">✉ Email alerts</button>
+      <button class="btn" id="wbtn" onclick="toggleWatch()">
+        <span class="dot" id="wdot"></span>
+        <span id="wlbl">Start watching</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="strip" id="strip"><span id="stripmsg"></span></div>
+
+<div class="hero">
+  <div class="hero-in">
+    <div>
+      <h1>Cats looking for a <em>forever home.</em></h1>
+      <p class="hero-sub">Live tracker · ThePetNest · Maharashtra · Auto-checks every 5 min</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="sttotal">—</div><div class="stat-l">Listed</div></div>
+      <div class="stat"><div class="stat-n" id="stnew">0</div><div class="stat-l">New today</div></div>
+    </div>
+  </div>
+  <div class="nbanner" id="nbanner">
+    <div class="nbanner-in">
+      <div class="nbanner-t">✦ New listings just appeared</div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="flbl">Filter</span>
+  <button class="fb on" onclick="filt('all',this)">All</button>
+  <button class="fb" onclick="filt('puppyhood',this)">Kitten</button>
+  <button class="fb" onclick="filt('adolescence',this)">Adolescent</button>
+  <button class="fb" onclick="filt('adulthood',this)">Adult</button>
+  <button class="fb" onclick="filt('senior',this)">Senior</button>
+  <button class="fb" onclick="filt('female',this)">Female</button>
+  <button class="fb" onclick="filt('male',this)">Male</button>
+  <button class="fb" onclick="filt('new',this)">New only</button>
+  <input class="sbox" id="sbox" type="search" placeholder="Name, city, breed…" oninput="render()">
+</div>
+
+<div class="main">
+  <div class="sort-row">
+    <span class="cnt" id="cnt"></span>
+    <select class="ssel" id="ssel" onchange="render()">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="name">Name A–Z</option>
+    </select>
+  </div>
+  <div class="grid" id="grid">
+    <div class="empty"><div class="empty-ico">🐾</div><h3>Loading cats…</h3><p>Fetching listings from ThePetNest</p></div>
+  </div>
+  <p class="lupd" id="lupd"></p>
+</div>
+
+<!-- EMAIL MODAL -->
+<div class="mbg" id="emb" onclick="if(event.target===this)closeEmail()">
+  <div class="mbox" onclick="event.stopPropagation()">
+    <div class="mhead">
+      <div><div class="mtitle">Email alerts</div><div class="msub">Get notified when new cats are posted</div></div>
+      <button class="mclose" onclick="closeEmail()">×</button>
+    </div>
+    <div class="mbody">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Uses <strong>EmailJS</strong> — free service, 200 emails/month, no backend needed.
+      </p>
+      <div class="steps">
+        <div class="step"><span class="snum">1</span><strong style="font-size:13px">Create free account at <a href="https://www.emailjs.com" target="_blank">emailjs.com</a></strong></div>
+        <div class="step"><span class="snum">2</span><strong style="font-size:13px">Add Email Service</strong><p>Email Services → Add Service → Gmail → Connect → note the <strong>Service ID</strong>.</p></div>
+        <div class="step"><span class="snum">3</span><strong style="font-size:13px">Create Email Template</strong><p>Email Templates → Create → Subject: <code>New cat: {{cat_name}}</code> · Body: <code>{{message}}</code> · To: <code>{{to_email}}</code> → note the <strong>Template ID</strong>.</p></div>
+        <div class="step"><span class="snum">4</span><strong style="font-size:13px">Copy your Public Key</strong><p>Account → General → Public Key.</p></div>
+      </div>
+      <hr class="div">
+      <div class="flbl2">EmailJS Public Key</div>
+      <input class="fi" id="ejpk" placeholder="e.g. aBcDeFgHiJ…">
+      <div class="flbl2">Service ID</div>
+      <input class="fi" id="ejsv" placeholder="e.g. service_xxxxxxx">
+      <div class="flbl2">Template ID</div>
+      <input class="fi" id="ejtm" placeholder="e.g. template_xxxxxxx">
+      <hr class="div">
+      <div class="flbl2">Alert recipients</div>
+      <div class="elist" id="elist"></div>
+      <div class="erow">
+        <input class="einp" id="einp" type="email" placeholder="someone@gmail.com" onkeydown="if(event.key==='Enter')addEmail()">
+        <button class="badd" onclick="addEmail()">Add</button>
+      </div>
+      <hr class="div">
+      <button class="bsave" onclick="saveEmail()">Save & enable email alerts</button>
+      <div class="smsg" id="smsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="mbg" id="dmb" onclick="if(event.target===this)closeDet()">
+  <div class="mbox" onclick="event.stopPropagation()">
+    <img class="dimg" id="dimg" src="" alt="">
+    <div class="dbody">
+      <div class="dname" id="dname"></div>
+      <div class="dbreed" id="dbreed"></div>
+      <div class="dgrid">
+        <div><div class="dfl">Gender</div><div class="dfv" id="dgender"></div></div>
+        <div><div class="dfl">Age stage</div><div class="dfv" id="dage"></div></div>
+        <div><div class="dfl">City</div><div class="dfv" id="dcity"></div></div>
+        <div><div class="dfl">Posted</div><div class="dfv" id="ddate"></div></div>
+      </div>
+      <div class="dacts">
+        <a class="bgo" id="dlink" href="#" target="_blank">See full listing on ThePetNest →</a>
+        <button class="bcls" onclick="closeDet()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIF TOAST -->
+<div class="toast" id="toast">
+  <p>Enable browser notifications for new cat alerts even when the tab is in the background?</p>
+  <div class="tbtns">
+    <button class="tyes" onclick="enableNotif()">Sure</button>
+    <button class="tno" onclick="dismissToast()">No thanks</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+let listings  = [];
+let newIds    = new Set();
+let seenIds   = new Set(JSON.parse(localStorage.getItem('pf_seen')||'[]'));
+let emails    = JSON.parse(localStorage.getItem('pf_emails')||'[]');
+let ejsCfg    = JSON.parse(localStorage.getItem('pf_ejs')||'null');
+let activeF   = 'all';
+let running   = false;
+let timer     = null;
+let checks    = 0;
+let newToday  = parseInt(localStorage.getItem('pf_ntd')||'0');
+
+const TODAY = new Date().toDateString();
+if (localStorage.getItem('pf_ntd_d') !== TODAY) {
+  newToday = 0; localStorage.setItem('pf_ntd','0'); localStorage.setItem('pf_ntd_d',TODAY);
+}
+
+const AGE = {puppyhood:'Kitten',adolescence:'Adolescent',adulthood:'Adult',senior:'Senior'};
+const BLANK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect fill='%23e6ddd0' width='4' height='3'/%3E%3C/svg%3E";
+
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function doCheck() {
+  setStrip('checking','Checking ThePetNest…');
+  try {
+    // Primary: our Netlify function (always works when deployed)
+    const r = await fetch('/.netlify/functions/scrape', {signal: AbortSignal.timeout(15000)});
+    if (!r.ok) throw new Error('Function error '+r.status);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error||'Parse failed');
+    processListings(d.listings);
+  } catch(e) {
+    setStrip('err','Could not load listings — will retry shortly ('+e.message+')');
+  }
+}
+
+function processListings(fresh) {
+  checks++;
+  const justNew = [];
+  if (checks > 1 || seenIds.size > 0) {
+    fresh.forEach(l => { if (!seenIds.has(l.id)) { newIds.add(l.id); justNew.push(l); } });
+  }
+  fresh.forEach(l => seenIds.add(l.id));
+  localStorage.setItem('pf_seen', JSON.stringify([...seenIds]));
+
+  if (justNew.length) {
+    newToday += justNew.length;
+    localStorage.setItem('pf_ntd', newToday);
+    showBanner(justNew);
+    pushNotif(justNew);
+    sendEmails(justNew);
+    setStrip('fresh', justNew.length + ' new cat'+(justNew.length>1?'s':'')+' appeared!');
+    setTimeout(clearStrip, 9000);
+  } else {
+    const t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    setStrip('ok','All up to date · checked at '+t);
+    setTimeout(clearStrip, 5000);
+  }
+
+  listings = fresh;
+  document.getElementById('sttotal').textContent = fresh.length||'—';
+  document.getElementById('stnew').textContent   = newToday;
+  render();
+  document.getElementById('lupd').textContent =
+    'Last updated: ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ── STATUS ────────────────────────────────────────────────────────────────────
+function setStrip(cls,msg){
+  const s=document.getElementById('strip');
+  s.className='strip show '+cls;
+  document.getElementById('stripmsg').textContent=msg;
+}
+function clearStrip(){document.getElementById('strip').className='strip';}
+
+// ── BANNER ───────────────────────────────────────────────────────────────────
+function showBanner(items){
+  document.getElementById('nbanner').classList.add('show');
+  document.getElementById('chips').innerHTML = items.map(i=>`
+    <a class="chip" href="${i.href}" target="_blank">
+      <img src="${i.imgSrc||BLANK}" alt="${i.name}" onerror="this.src='${BLANK}'">
+      ${i.name}${i.city?' · '+i.city:''}
+    </a>`).join('');
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  const sort = document.getElementById('ssel').value;
+  const q    = (document.getElementById('sbox').value||'').toLowerCase().trim();
+  let items  = [...listings];
+
+  if      (activeF==='new')                   items=items.filter(i=>newIds.has(i.id));
+  else if (activeF==='female'||activeF==='male') items=items.filter(i=>i.gender===activeF);
+  else if (activeF!=='all')                   items=items.filter(i=>i.age===activeF);
+
+  if (q) items=items.filter(i=>
+    i.name.toLowerCase().includes(q)||
+    i.city.toLowerCase().includes(q)||
+    i.breed.toLowerCase().includes(q));
+
+  if (sort==='oldest') items.reverse();
+  else if (sort==='name') items.sort((a,b)=>a.name.localeCompare(b.name));
+
+  document.getElementById('cnt').textContent = items.length+' cat'+(items.length!==1?'s':'')+' found';
+
+  const g = document.getElementById('grid');
+  if (!items.length){
+    g.innerHTML=`<div class="empty"><div class="empty-ico">🐱</div><h3>No cats match</h3><p>Try a different filter or search</p></div>`;
+    return;
+  }
+  g.innerHTML = items.map((item,i)=>`
+    <div class="card ${newIds.has(item.id)?'isnew':''}"
+         style="animation-delay:${Math.min(i,14)*25}ms"
+         onclick='openDet(${JSON.stringify(item).replace(/'/g,"&#39;")})'>
+      <div class="cimg">
+        <img src="${item.imgSrc||BLANK}" alt="${item.name}" loading="lazy" onerror="this.src='${BLANK}'">
+        ${newIds.has(item.id)?'<span class="badge bnew">New</span>':''}
+        ${item.age?`<span class="badge bage">${AGE[item.age]||item.age}</span>`:''}
+      </div>
+      <div class="cbody">
+        <div class="cname">${item.name}</div>
+        ${item.breed?`<div class="cbreed">${item.breed}</div>`:''}
+        <div class="cloc">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            <circle cx="12" cy="9" r="2.5"/>
+          </svg>
+          ${item.city||'Maharashtra'}${item.gender?' · '+item.gender:''}
+        </div>
+        ${item.postedDate?`<div class="cdate">Posted ${item.postedDate}</div>`:''}
+        <span class="ccta">See details →</span>
+      </div>
+    </div>`).join('');
+}
+
+function filt(v,btn){
+  activeF=v;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  render();
+}
+
+// ── DETAIL MODAL ──────────────────────────────────────────────────────────────
+function openDet(item){
+  document.getElementById('dimg').src    = item.imgSrc||BLANK;
+  document.getElementById('dname').textContent   = item.name;
+  document.getElementById('dbreed').textContent  = item.breed||'—';
+  document.getElementById('dgender').textContent = item.gender||'—';
+  document.getElementById('dage').textContent    = AGE[item.age]||item.age||'—';
+  document.getElementById('dcity').textContent   = item.city||'—';
+  document.getElementById('ddate').textContent   = item.postedDate||'—';
+  document.getElementById('dlink').href          = item.href;
+  document.getElementById('dmb').classList.add('open');
+}
+function closeDet(){ document.getElementById('dmb').classList.remove('open'); }
+
+// ── WATCHER ───────────────────────────────────────────────────────────────────
+function toggleWatch(){
+  if(running){
+    clearInterval(timer); running=false;
+    document.getElementById('wlbl').textContent='Start watching';
+    document.getElementById('wbtn').classList.remove('on');
+    clearStrip();
+  } else { startWatch(); }
+}
+
+function startWatch(){
+  running=true;
+  document.getElementById('wlbl').textContent='Watching…';
+  document.getElementById('wbtn').classList.add('on');
+  const ms=parseInt(document.getElementById('isel').value);
+  doCheck();
+  timer=setInterval(doCheck,ms);
+  document.getElementById('isel').onchange=()=>{
+    if(!running)return;
+    clearInterval(timer);
+    timer=setInterval(doCheck,parseInt(document.getElementById('isel').value));
+  };
+  if(Notification.permission==='default')
+    setTimeout(()=>document.getElementById('toast').classList.add('show'),2500);
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+function enableNotif(){ Notification.requestPermission(); dismissToast(); }
+function dismissToast(){ document.getElementById('toast').classList.remove('show'); }
+function pushNotif(items){
+  if(Notification.permission!=='granted')return;
+  items.forEach(i=>new Notification('New cat on ThePetNest: '+i.name+'!',{
+    body:(i.city||'Maharashtra')+(i.breed?' · '+i.breed:''),
+    icon:'https://thepetnest.com/favicon.ico'
+  }));
+}
+
+// ── EMAIL MODAL ───────────────────────────────────────────────────────────────
+function openEmail(){
+  if(ejsCfg){
+    document.getElementById('ejpk').value = ejsCfg.publicKey||'';
+    document.getElementById('ejsv').value = ejsCfg.serviceId||'';
+    document.getElementById('ejtm').value = ejsCfg.templateId||'';
+  }
+  renderEList();
+  document.getElementById('emb').classList.add('open');
+}
+function closeEmail(){ document.getElementById('emb').classList.remove('open'); }
+
+function renderEList(){
+  const el=document.getElementById('elist');
+  if(!emails.length){el.innerHTML='<p style="font-size:13px;color:var(--faint)">No recipients yet</p>';return;}
+  el.innerHTML=emails.map((e,i)=>`
+    <div class="eitem">
+      <span>${e}</span>
+      <button class="edel" onclick="removeEmail(${i})">×</button>
+    </div>`).join('');
+}
+function addEmail(){
+  const v=document.getElementById('einp').value.trim();
+  if(!v||!v.includes('@'))return;
+  if(!emails.includes(v))emails.push(v);
+  localStorage.setItem('pf_emails',JSON.stringify(emails));
+  document.getElementById('einp').value='';
+  renderEList();
+}
+function removeEmail(i){
+  emails.splice(i,1);
+  localStorage.setItem('pf_emails',JSON.stringify(emails));
+  renderEList();
+}
+function saveEmail(){
+  const pk=document.getElementById('ejpk').value.trim();
+  const sv=document.getElementById('ejsv').value.trim();
+  const tm=document.getElementById('ejtm').value.trim();
+  const msg=document.getElementById('smsg');
+  if(!pk||!sv||!tm){msg.textContent='Fill in all three EmailJS fields.';msg.className='smsg err';return;}
+  if(!emails.length){msg.textContent='Add at least one recipient.';msg.className='smsg err';return;}
+  ejsCfg={publicKey:pk,serviceId:sv,templateId:tm};
+  localStorage.setItem('pf_ejs',JSON.stringify(ejsCfg));
+  emailjs.init({publicKey:pk});
+  msg.textContent='✓ Saved! Email alerts are active.';msg.className='smsg';
+  setTimeout(closeEmail,1400);
+}
+
+// ── SEND EMAILS ───────────────────────────────────────────────────────────────
+async function sendEmails(items){
+  if(!ejsCfg||!emails.length||!items.length)return;
+  emailjs.init({publicKey:ejsCfg.publicKey});
+  for(const to of emails){
+    for(const cat of items){
+      const msg=
+        `${cat.name} is available for adoption!\n\n`+
+        `Breed: ${cat.breed||'—'}\nGender: ${cat.gender||'—'}\n`+
+        `Age: ${AGE[cat.age]||cat.age||'—'}\nCity: ${cat.city||'Maharashtra'}\n`+
+        `Posted: ${cat.postedDate||'—'}\n\nSee listing: ${cat.href}`;
+      try{
+        await emailjs.send(ejsCfg.serviceId,ejsCfg.templateId,{
+          to_email:to, cat_name:cat.name, message:msg
+        });
+      }catch(e){console.warn('EmailJS:',e);}
+    }
+  }
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeDet();closeEmail();}
+});
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  if(ejsCfg) emailjs.init({publicKey:ejsCfg.publicKey});
+  startWatch();
+});
+</script>
+</body>
+</html>
