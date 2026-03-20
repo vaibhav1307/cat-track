@@ -1,9 +1,6 @@
 const https = require("https");
 
-// ── Replace with your ScraperAPI key ──────────────────────────────────────────
-// Get a free key at https://www.scraperapi.com (1000 free calls/month)
-const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY || "YOUR_API_KEY_HERE";
-
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY || "";
 const TARGET = "https://thepetnest.com/adopt-a-cat?category_id=2&state_id=1";
 
 function get(url) {
@@ -31,57 +28,32 @@ function get(url) {
 function parse(html) {
   const items = [];
   const seen  = new Set();
-
-  // Split on "Posted on:" — each block is one listing
   const blocks = html.split(/Posted on:/i);
-
   for (let i = 1; i < blocks.length; i++) {
     const block = blocks[i];
-
-    // Date is the text immediately after "Posted on:"
     const dateM      = block.match(/^\s*([^\n<]{4,25})/);
     const postedDate = dateM ? dateM[1].replace(/,/g, "").trim() : "";
-
-    // Link + slug + id
     const linkM = block.match(/href="(\/adopt-a-pet\/([\w-]+)\/(\d+))"/);
     if (!linkM) continue;
     const [, fullPath, slug, id] = linkM;
     if (seen.has(id)) continue;
     seen.add(id);
-
-    // Image (full signed URL is fine — expires in ~48h but always fresh on each scrape)
     const imgM   = block.match(/src="(https:\/\/assets\.thepetnest\.com\/[^"]+)"/);
     const imgSrc = imgM ? imgM[1] : "";
-
-    // Name from alt text
     const altM    = block.match(/alt="([^"]+?)\s+for adoption"/i);
     const rawName = altM ? altM[1].trim() : slug.replace(/-in-[\w-]+$/, "").replace(/-/g, " ");
     const name    = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-
-    // Breed & city from slug
     const breedM = slug.match(/^(.+?)-in-/);
     const cityM  = slug.match(/-in-(.+)$/);
     const breed  = breedM ? breedM[1].replace(/-/g, " ") : "";
     const city   = cityM  ? cityM[1].replace(/-/g, " ")  : "";
-
-    // Gender & age from surrounding plain text
     const text = block.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase();
     const gM   = text.match(/\b(female|male)\b/);
     const aM   = text.match(/\b(puppyhood|adolescence|adulthood|senior)\b/);
-
-    items.push({
-      id,
-      name,
-      breed,
-      city,
-      gender    : gM ? gM[1] : "",
-      age       : aM ? aM[1] : "",
-      imgSrc,
-      postedDate,
-      href      : "https://thepetnest.com" + fullPath,
-    });
+    items.push({ id, name, breed, city,
+      gender: gM ? gM[1] : "", age: aM ? aM[1] : "",
+      imgSrc, postedDate, href: "https://thepetnest.com" + fullPath });
   }
-
   return items;
 }
 
@@ -92,39 +64,40 @@ exports.handler = async () => {
     "Cache-Control": "no-store",
   };
 
+  const hasKey = SCRAPER_API_KEY.length > 5 && SCRAPER_API_KEY !== "YOUR_API_KEY_HERE";
+
   try {
-    // Route through ScraperAPI with India geotargeting
-    // country_code=in makes ThePetNest think we're in India → returns full listings
-    const apiUrl =
-      `https://api.scraperapi.com/?api_key=${SCRAPER_API_KEY}` +
-      `&url=${encodeURIComponent(TARGET)}` +
-      `&country_code=in` +
-      `&render=false`;
+    let fetchUrl, method;
 
-    const { status, body } = await get(apiUrl);
-
-    if (status !== 200) {
-      throw new Error(`ScraperAPI returned HTTP ${status}`);
+    if (hasKey) {
+      fetchUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(TARGET)}&country_code=in&render=false`;
+      method = "scraperapi";
+    } else {
+      fetchUrl = TARGET;
+      method = "direct";
     }
 
-    // Sanity check — if we got an empty shell (no "Posted on:"), something went wrong
-    if (!body.includes("Posted on:")) {
-      throw new Error("Page returned no listings (possible block or empty page)");
+    const { status, body } = await get(fetchUrl);
+    const hasListings = body.includes("Posted on:");
+
+    if (!hasListings) {
+      return { statusCode: 200, headers: cors, body: JSON.stringify({
+        ok: false, method, httpStatus: status, hasKey,
+        error: hasKey
+          ? "ScraperAPI key found but still no listings — check key is valid and has credits at scraperapi.com dashboard"
+          : "No SCRAPER_API_KEY set in Netlify environment variables — go to Site config → Environment variables → add SCRAPER_API_KEY",
+        htmlStart: body.substring(0, 300)
+      })};
     }
 
     const listings = parse(body);
-
-    return {
-      statusCode: 200,
-      headers: cors,
-      body: JSON.stringify({ ok: true, count: listings.length, listings }),
-    };
+    return { statusCode: 200, headers: cors, body: JSON.stringify({
+      ok: true, method, count: listings.length, listings
+    })};
 
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers: cors,
-      body: JSON.stringify({ ok: false, error: err.message }),
-    };
+    return { statusCode: 200, headers: cors, body: JSON.stringify({
+      ok: false, hasKey, error: err.message
+    })};
   }
 };
