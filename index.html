@@ -181,7 +181,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:16px 0}
   <div class="hdr">
     <a class="logo" href="#"><span class="logo-main">Purrfect Find</span><span class="logo-sub">MH cats</span></a>
     <div class="hdr-right">
-      <select class="isel" id="isel" onchange="localStorage.setItem('pf_interval',this.value);if(running){clearInterval(timer);timer=setInterval(doCheck,parseInt(this.value));}">
+      <select class="isel" id="isel" onchange="localStorage.setItem('pf_interval',this.value);if(running){clearInterval(timer);timer=setInterval(doCheck,parseInt(this.value));}">  
         <option value="300000">Every 5 min</option>
         <option value="900000">Every 15 min</option>
         <option value="1800000">Every 30 min</option>
@@ -295,6 +295,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:16px 0}
         <div><div class="dfl">Age stage</div><div class="dfv" id="dage"></div></div>
         <div><div class="dfl">City</div><div class="dfv" id="dcity"></div></div>
         <div><div class="dfl">Posted</div><div class="dfv" id="ddate"></div></div>
+        <div><div class="dfl">Owner</div><div class="dfv" id="downer"></div></div>
       </div>
       <div class="dacts">
         <a class="bgo" id="dlink" href="#" target="_blank">See full listing on ThePetNest →</a>
@@ -443,6 +444,7 @@ function render(){
           ${item.city||'Maharashtra'}${item.gender?' · '+item.gender:''}
         </div>
         ${item.postedDate?`<div class="cdate">Posted ${item.postedDate}</div>`:''}
+        ${item.owner?`<div class="cdate" style="color:var(--sage)">👤 ${item.owner}</div>`:''}
         <span class="ccta">See details →</span>
       </div>
     </div>`).join('');
@@ -464,6 +466,7 @@ function openDet(item){
   document.getElementById('dage').textContent    = AGE[item.age]||item.age||'—';
   document.getElementById('dcity').textContent   = item.city||'—';
   document.getElementById('ddate').textContent   = item.postedDate||'—';
+  document.getElementById('downer').textContent  = item.owner||'—';
   document.getElementById('dlink').href          = item.href;
   document.getElementById('dmb').classList.add('open');
 }
@@ -483,17 +486,13 @@ function startWatch(){
   running=true;
   document.getElementById('wlbl').textContent='Watching…';
   document.getElementById('wbtn').classList.add('on');
-  const saved = localStorage.getItem('pf_interval');
-  if(saved) document.getElementById('isel').value = saved;
- const ms=parseInt(document.getElementById('isel').value);
+  const ms=parseInt(document.getElementById('isel').value);
   doCheck();
   timer=setInterval(doCheck,ms);
   document.getElementById('isel').onchange=()=>{
     if(!running)return;
-    const newMs=parseInt(document.getElementById('isel').value);
-    localStorage.setItem('pf_interval',document.getElementById('isel').value);
     clearInterval(timer);
-    timer=setInterval(doCheck,newMs);
+    timer=setInterval(doCheck,parseInt(document.getElementById('isel').value));
   };
   if(Notification.permission==='default')
     setTimeout(()=>document.getElementById('toast').classList.add('show'),2500);
@@ -587,10 +586,7 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('load',()=>{
   if(ejsCfg) emailjs.init({publicKey:ejsCfg.publicKey});
   const saved=localStorage.getItem('pf_interval');
-  if(saved){
-    const sel=document.getElementById('isel');
-    sel.value=saved;
-  }
+  if(saved){ document.getElementById('isel').value=saved; }
   startWatch();
 });
 </script>
