@@ -483,13 +483,17 @@ function startWatch(){
   running=true;
   document.getElementById('wlbl').textContent='Watching…';
   document.getElementById('wbtn').classList.add('on');
+  const saved = localStorage.getItem('pf_interval');
+  if(saved) document.getElementById('isel').value = saved;
   const ms=parseInt(document.getElementById('isel').value);
   doCheck();
   timer=setInterval(doCheck,ms);
   document.getElementById('isel').onchange=()=>{
     if(!running)return;
+    const newMs = parseInt(document.getElementById('isel').value);
+    localStorage.setItem('pf_interval', document.getElementById('isel').value);
     clearInterval(timer);
-    timer=setInterval(doCheck,parseInt(document.getElementById('isel').value));
+    timer=setInterval(doCheck, newMs);
   };
   if(Notification.permission==='default')
     setTimeout(()=>document.getElementById('toast').classList.add('show'),2500);
