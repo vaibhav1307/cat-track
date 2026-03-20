@@ -36,30 +36,19 @@ exports.handler = async () => {
     const fetchUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(TARGET)}&country_code=in&render=false`;
     const { status, body } = await get(fetchUrl);
 
-    // Find a useful chunk — search for "adopt-a-pet" or "persian" or any listing marker
-    const adoptIdx   = body.indexOf("adopt-a-pet");
-    const postedIdx  = body.indexOf("Posted");
-    const persianIdx = body.indexOf("persian");
-    const bodyLen    = body.length;
+    const postedIdx = body.indexOf("Posted on:");
 
-    // Grab 1000 chars around the first listing hint, or just the middle of the page
-    const sampleIdx = Math.max(0, Math.min(adoptIdx, postedIdx, persianIdx) - 200);
-    const sample    = sampleIdx > 0
-      ? body.substring(sampleIdx, sampleIdx + 1000)
-      : body.substring(Math.floor(bodyLen / 3), Math.floor(bodyLen / 3) + 1000);
+    // Sample 2500 chars starting 100 before first "Posted on:" — this shows a full listing block
+    const sample = body.substring(Math.max(0, postedIdx - 100), postedIdx + 2500);
 
     return {
       statusCode: 200,
       headers: cors,
       body: JSON.stringify({
-        httpStatus   : status,
-        bodyLength   : bodyLen,
-        hasPostedOn  : body.includes("Posted on:"),
-        hasAdoptAPet : body.includes("adopt-a-pet"),
-        hasPersian   : body.includes("persian"),
-        firstAdoptIdx: adoptIdx,
+        httpStatus: status,
+        bodyLength: body.length,
         firstPostedIdx: postedIdx,
-        htmlSample   : sample,
+        htmlSample: sample,
       }),
     };
   } catch (err) {
