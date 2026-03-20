@@ -10,6 +10,11 @@ function get(url) {
         "Accept-Encoding": "identity",
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
+        // Spoof Indian IP so ThePetNest returns listings (they geo-restrict content)
+        "X-Forwarded-For": "103.21.58.192",
+        "X-Real-IP": "103.21.58.192",
+        "CF-IPCountry": "IN",
+        "X-Country-Code": "IN",
       }
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -29,49 +34,45 @@ function parse(html) {
   const items = [];
   const seen  = new Set();
 
-  // Each listing block: find every anchor pointing to /adopt-a-pet/.../ID
-  const re = /href="(\/adopt-a-pet\/([\w-]+)\/(\d+))"/g;
-  let m;
+  // Split on "Posted on:" to get individual listing blocks
+  const blocks = html.split(/Posted on:/i);
 
-  while ((m = re.exec(html)) !== null) {
-    const fullPath = m[1];
-    const slug     = m[2];
-    const id       = m[3];
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i];
+
+    // Date: first thing after "Posted on:"
+    const dateM = block.match(/^\s*([^<\n]{3,30})/);
+    const postedDate = dateM ? dateM[1].replace(/,/g,"").trim() : "";
+
+    // Find the adopt-a-pet link in this block
+    const linkM = block.match(/href="(\/adopt-a-pet\/([\w-]+)\/(\d+))"/);
+    if (!linkM) continue;
+
+    const fullPath = linkM[1];
+    const slug     = linkM[2];
+    const id       = linkM[3];
     if (seen.has(id)) continue;
     seen.add(id);
 
-    // Grab surrounding HTML – search backwards too for "Posted on" date
-    const start = Math.max(0, m.index - 800);
-    const end   = Math.min(html.length, m.index + 1500);
-    const chunk = html.slice(start, end);
+    // Image src
+    const imgM   = block.match(/src="(https:\/\/assets\.thepetnest\.com\/[^"]+)"/);
+    const imgSrc = imgM ? imgM[1] : "";
 
-    // Image: assets.thepetnest.com — grab the base key before the query string
-    const imgM = chunk.match(/src="(https:\/\/assets\.thepetnest\.com\/[A-Za-z0-9]+)/);
-    // Use a proxy-friendly image URL (just the key, no expiring sig)
-    const imgKey = imgM ? imgM[1] : "";
-    // We'll keep the full signed URL as-is; they last ~48h which is fine for display
-    const imgFull = chunk.match(/src="(https:\/\/assets\.thepetnest\.com\/[^"]+)"/);
-    const imgSrc  = imgFull ? imgFull[1] : "";
-
-    // Cat name from alt attribute
-    const altM = chunk.match(/alt="([^"]+?)\s+for adoption"/i);
-    const rawName = altM
-      ? altM[1].trim()
-      : slug.replace(/-in-[\w-]+$/, "").replace(/-/g, " ");
-    const name = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    // Cat name from alt
+    const altM    = block.match(/alt="([^"]+?)\s+for adoption"/i);
+    const rawName = altM ? altM[1].trim() : slug.replace(/-in-[\w-]+$/, "").replace(/-/g, " ");
+    const name    = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
     // Breed & city from slug
-    const breedM = slug.match(/^([\w-]+?)-in-/);
-    const cityM  = slug.match(/-in-([\w-]+)$/);
+    const breedM = slug.match(/^(.+?)-in-/);
+    const cityM  = slug.match(/-in-(.+)$/);
     const breed  = breedM ? breedM[1].replace(/-/g, " ") : "";
     const city   = cityM  ? cityM[1].replace(/-/g, " ")  : "";
 
-    // Strip tags for text matching
-    const text = chunk.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase();
+    // Gender & age from stripped text
+    const text = block.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase();
     const gM   = text.match(/\b(female|male)\b/);
     const aM   = text.match(/\b(puppyhood|adolescence|adulthood|senior)\b/);
-    // Date in "Posted on: 18 Mar, 2026" format
-    const dM   = chunk.match(/Posted on:\s*([^<\n]+)/i);
 
     items.push({
       id,
@@ -81,7 +82,7 @@ function parse(html) {
       gender    : gM ? gM[1] : "",
       age       : aM ? aM[1] : "",
       imgSrc,
-      postedDate: dM ? dM[1].replace(/,/g, "").trim() : "",
+      postedDate,
       href      : "https://thepetnest.com" + fullPath,
     });
   }
