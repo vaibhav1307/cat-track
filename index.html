@@ -181,7 +181,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:16px 0}
   <div class="hdr">
     <a class="logo" href="#"><span class="logo-main">Purrfect Find</span><span class="logo-sub">MH cats</span></a>
     <div class="hdr-right">
-      <select class="isel" id="isel">
+      <select class="isel" id="isel" onchange="localStorage.setItem('pf_interval',this.value)">
         <option value="300000">Every 5 min</option>
         <option value="900000">Every 15 min</option>
         <option value="1800000">Every 30 min</option>
@@ -485,15 +485,15 @@ function startWatch(){
   document.getElementById('wbtn').classList.add('on');
   const saved = localStorage.getItem('pf_interval');
   if(saved) document.getElementById('isel').value = saved;
-  const ms=parseInt(document.getElementById('isel').value);
+ const ms=parseInt(document.getElementById('isel').value);
   doCheck();
   timer=setInterval(doCheck,ms);
   document.getElementById('isel').onchange=()=>{
     if(!running)return;
-    const newMs = parseInt(document.getElementById('isel').value);
-    localStorage.setItem('pf_interval', document.getElementById('isel').value);
+    const newMs=parseInt(document.getElementById('isel').value);
+    localStorage.setItem('pf_interval',document.getElementById('isel').value);
     clearInterval(timer);
-    timer=setInterval(doCheck, newMs);
+    timer=setInterval(doCheck,newMs);
   };
   if(Notification.permission==='default')
     setTimeout(()=>document.getElementById('toast').classList.add('show'),2500);
@@ -586,6 +586,9 @@ document.addEventListener('keydown',e=>{
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load',()=>{
   if(ejsCfg) emailjs.init({publicKey:ejsCfg.publicKey});
+  // Restore saved interval before starting watcher
+  const saved = localStorage.getItem('pf_interval');
+  if(saved) document.getElementById('isel').value = saved;
   startWatch();
 });
 </script>
